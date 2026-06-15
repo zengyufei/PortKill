@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>portKill</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar" aria-label="overview">
+        <div class="brand">
+          <div class="mark" aria-hidden="true">
+            <span></span>
+          </div>
+          <div>
+            <h1>portKill</h1>
+            <p>看清楚本机端口占用，再决定是否结束进程。</p>
+          </div>
+        </div>
+        <div class="summary" aria-live="polite">
+          <div>
+            <strong id="countAll">0</strong>
+            <span>当前结果</span>
+          </div>
+          <div>
+            <strong id="countListen">0</strong>
+            <span>监听/UDP</span>
+          </div>
+          <div>
+            <strong id="countTcp">0</strong>
+            <span>TCP</span>
+          </div>
+          <div>
+            <strong id="countUdp">0</strong>
+            <span>UDP</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="toolbar" aria-label="filters">
+        <label class="search">
+          <span>搜索</span>
+          <input id="query" type="search" placeholder="端口、PID、进程名、路径" autocomplete="off" />
+        </label>
+        <label>
+          <span>协议</span>
+          <select id="protocol">
+            <option value="all">全部</option>
+            <option value="tcp">TCP</option>
+            <option value="udp">UDP</option>
+          </select>
+        </label>
+        <label>
+          <span>IP 版本</span>
+          <select id="ipVersion">
+            <option value="all">全部</option>
+            <option value="ipv4">IPv4</option>
+            <option value="ipv6">IPv6</option>
+          </select>
+        </label>
+        <label>
+          <span>TCP 状态</span>
+          <select id="state">
+            <option value="">全部</option>
+            <option value="LISTENING">LISTENING</option>
+            <option value="ESTABLISHED">ESTABLISHED</option>
+            <option value="TIME_WAIT">TIME_WAIT</option>
+            <option value="CLOSE_WAIT">CLOSE_WAIT</option>
+            <option value="SYN_SENT">SYN_SENT</option>
+            <option value="SYN_RECEIVED">SYN_RECEIVED</option>
+          </select>
+        </label>
+        <label class="toggle">
+          <input id="showDetails" type="checkbox" />
+          <span>显示连接明细</span>
+        </label>
+        <button id="refresh" type="button">刷新</button>
+      </section>
+
+      <section class="notice" id="notice" hidden></section>
+
+      <section class="table-wrap" aria-label="port table">
+        <table>
+          <thead>
+            <tr>
+              <th>协议</th>
+              <th>本地地址</th>
+              <th>端口</th>
+              <th>远程地址</th>
+              <th>远程端口</th>
+              <th>状态</th>
+              <th>PID</th>
+              <th>进程</th>
+              <th>路径</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr>
+              <td colspan="10" class="empty">正在读取端口表</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="modal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h2 id="modalTitle">确认结束进程</h2>
+        <p id="modalText"></p>
+        <dl id="modalFacts"></dl>
+        <div class="modal-actions">
+          <button id="cancelKill" type="button">取消</button>
+          <button id="confirmKill" class="danger" type="button">结束进程</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

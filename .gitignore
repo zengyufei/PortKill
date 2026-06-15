@@ -1,0 +1,40 @@
+# Build outputs
+target/
+dist/
+src-tauri/target/
+
+# Tauri generated schemas and transient files
+src-tauri/gen/
+
+# Generated icon preview; keep icon.svg and icon.ico
+src-tauri/icons/icon.png
+
+# External reference snapshots, not application source
+/*.html
+
+# Debug symbols and linker byproducts
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# Logs and local diagnostics
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
