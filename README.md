@@ -27,8 +27,6 @@ The main APIs used are `GetExtendedTcpTable`, `GetExtendedUdpTable`, `OpenProces
 
 ```text
 .
-├── .github/
-│   └── workflows/release.yml
 ├── README.md
 ├── README.zh.md
 ├── scripts/
@@ -151,12 +149,6 @@ The script:
 - Builds `portKill.exe`.
 - Copies release files to `dist\portKill-portable`.
 - Creates `dist\portKill-windows-x64-portable.zip`.
-
-## GitHub Actions
-
-The release workflow is in `.github\workflows\release.yml`.
-
-It can be run manually from GitHub Actions, and it also runs when pushing a tag that starts with `v`, such as `v0.1.0`. Every run uploads `dist\portKill-windows-x64-portable.zip` as a workflow artifact. Tag builds also create or update the matching GitHub Release and attach the same zip file.
 
 ## Safety Notes
 

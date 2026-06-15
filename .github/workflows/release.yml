@@ -1,10 +1,9 @@
 name: Release
 
 on:
-  workflow_dispatch:
   push:
     tags:
-      - "v*"
+      - "**"
 
 permissions:
   contents: write
@@ -14,7 +13,7 @@ env:
 
 jobs:
   release:
-    name: Build Windows portable package
+    name: Build and publish Windows binaries
     runs-on: windows-latest
 
     steps:
@@ -33,33 +32,76 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            src-tauri/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Build portable package
+      - name: Build
         shell: pwsh
-        run: powershell -ExecutionPolicy Bypass -File .\scripts\build-portable.ps1
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\generate-icon.ps1
+          Push-Location src-tauri
+          cargo test --locked
+          cargo build --release --locked --bin portKill-cli
+          cargo build --release --locked --bin portKill
+          Pop-Location
 
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: portKill-windows-x64-portable
-          path: dist/portKill-windows-x64-portable.zip
-          if-no-files-found: error
+      - name: Prepare release package
+        id: package
+        shell: pwsh
+        run: |
+          $dist = "dist"
+          $portable = "$dist/portKill-portable"
+          $zip = "$dist/portKill-windows-x64-portable.zip"
+
+          if (Test-Path $portable) {
+            Remove-Item -LiteralPath $portable -Recurse -Force
+          }
+          if (Test-Path $zip) {
+            Remove-Item -LiteralPath $zip -Force
+          }
+
+          New-Item -ItemType Directory -Force $portable | Out-Null
+          Copy-Item "src-tauri/target/release/portKill.exe" "$portable/portKill.exe"
+          Copy-Item "src-tauri/target/release/portKill-cli.exe" "$portable/portKill-cli.exe"
+
+          @'
+          portKill portable package
+
+          Files:
+          - portKill.exe: GUI version.
+          - portKill-cli.exe: command line version.
+
+          CLI:
+            portKill-cli list [--json] [--protocol tcp|udp|all] [--state LISTENING] [--query text] [--listeners-only]
+            portKill-cli find --port <port> [--json]
+            portKill-cli kill --pid <pid> [--yes]
+
+          Safety:
+          - This tool does not run in the background.
+          - This tool does not touch firewall rules.
+          - This tool does not auto-kill processes.
+          - PID 0, PID 4, and portKill itself are protected.
+          '@ | Set-Content -LiteralPath "$portable/README.txt" -Encoding UTF8
+
+          $portableFiles = Get-ChildItem -LiteralPath $portable -Force
+          Compress-Archive -LiteralPath $portableFiles.FullName -DestinationPath $zip -Force
+
+          "zip=$zip" >> $env:GITHUB_OUTPUT
 
       - name: Publish GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ github.ref_name }}"
-          $asset = "dist/portKill-windows-x64-portable.zip"
+          $asset = "${{ steps.package.outputs.zip }}"
 
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
+            gh release view $tag --json assets --jq '.assets[].name' |
+              Where-Object { $_ -like "*.zip" } |
+              ForEach-Object { gh release delete-asset $tag $_ --yes }
             gh release upload $tag $asset --clobber
           } else {
             gh release create $tag $asset --title $tag --notes "Automated release for $tag."

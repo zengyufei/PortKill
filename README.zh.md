@@ -27,8 +27,6 @@ English documentation: [README.md](./README.md)
 
 ```text
 .
-├── .github/
-│   └── workflows/release.yml
 ├── README.md
 ├── README.zh.md
 ├── scripts/
@@ -151,12 +149,6 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build-portable.ps1
 - 构建 `portKill.exe`。
 - 复制 release 文件到 `dist\portKill-portable`。
 - 生成 `dist\portKill-windows-x64-portable.zip`。
-
-## GitHub Actions
-
-发布构建流程在 `.github\workflows\release.yml`。
-
-它支持在 GitHub Actions 页面手动触发，也会在推送 `v` 开头的 tag 时自动运行，例如 `v0.1.0`。每次运行都会把 `dist\portKill-windows-x64-portable.zip` 上传为 workflow artifact。tag 构建还会创建或更新对应的 GitHub Release，并挂载同一个 zip 文件。
 
 ## 安全说明
 

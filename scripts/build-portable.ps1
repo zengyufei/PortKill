@@ -5,39 +5,13 @@ $srcTauri = Join-Path $root 'src-tauri'
 $dist = Join-Path $root 'dist'
 $portable = Join-Path $dist 'portKill-portable'
 $zip = Join-Path $dist 'portKill-windows-x64-portable.zip'
+$vcvars = 'C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat'
 
-function Find-VcVars64 {
-    $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-    if (Test-Path $vswhere) {
-        $installPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-        if ($LASTEXITCODE -eq 0 -and $installPath) {
-            $candidate = Join-Path $installPath 'VC\Auxiliary\Build\vcvars64.bat'
-            if (Test-Path $candidate) {
-                return $candidate
-            }
-        }
-    }
-
-    $candidates = @(
-        'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat',
-        'C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat',
-        'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat',
-        'C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat',
-        'C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat',
-        'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat'
-    )
-
-    foreach ($candidate in $candidates) {
-        if (Test-Path $candidate) {
-            return $candidate
-        }
-    }
-
-    return $null
+if (!(Test-Path $vcvars)) {
+    $vcvars = 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat'
 }
 
-$vcvars = Find-VcVars64
-if (!$vcvars -or !(Test-Path $vcvars)) {
+if (!(Test-Path $vcvars)) {
     throw '未找到 vcvars64.bat。请安装 Visual Studio Build Tools 或在 Developer PowerShell 中运行。'
 }
 
