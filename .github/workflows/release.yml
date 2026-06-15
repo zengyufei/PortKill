@@ -36,6 +36,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Install UPX
+        run: choco install upx
+
       - name: Build
         shell: pwsh
         run: |
@@ -64,6 +67,8 @@ jobs:
           New-Item -ItemType Directory -Force $portable | Out-Null
           Copy-Item "src-tauri/target/release/portKill.exe" "$portable/portKill.exe"
           Copy-Item "src-tauri/target/release/portKill-cli.exe" "$portable/portKill-cli.exe"
+          upx --best "$portable/portKill.exe"
+          upx --best "$portable/portKill-cli.exe"
 
           @'
           portKill portable package
