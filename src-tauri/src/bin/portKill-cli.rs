@@ -72,6 +72,7 @@ fn find_command(args: &[String]) -> Result<(), String> {
 
 fn kill_command(args: &[String]) -> Result<(), String> {
     let mut pid = None;
+    let mut port = None;
     let mut yes = false;
     let mut i = 0;
     while i < args.len() {
@@ -80,15 +81,39 @@ fn kill_command(args: &[String]) -> Result<(), String> {
                 i += 1;
                 pid = Some(parse_required_u32(args.get(i), "--pid")?);
             }
+            "--port" => {
+                i += 1;
+                port = Some(parse_required_u16(args.get(i), "--port")?);
+            }
             "--yes" => yes = true,
             unknown => return Err(format!("kill 不支持参数：{unknown}")),
         }
         i += 1;
     }
 
-    let pid = pid.ok_or_else(|| "kill 必须提供 --pid <pid>".to_string())?;
+    if pid.is_some() && port.is_some() {
+        return Err("kill 只能提供 --pid 或 --port 其中一个".to_string());
+    }
+
+    let target = match (pid, port) {
+        (Some(pid), None) => KillTarget::Pid(pid),
+        (None, Some(port)) => {
+            let entries = list_filtered_ports(&PortFilter {
+                port: Some(port),
+                ..Default::default()
+            })?;
+            KillTarget::Port {
+                port,
+                pid: resolve_single_pid_for_port(port, &entries)?,
+            }
+        }
+        (None, None) => return Err("kill 必须提供 --pid <pid> 或 --port <port>".to_string()),
+        (Some(_), Some(_)) => unreachable!(),
+    };
+
+    let pid = target.pid();
     if !yes {
-        print!("确认结束 PID {pid} 对应的进程？输入 yes 继续：");
+        print!("{}输入 yes 继续：", target.confirmation_prompt());
         io::stdout().flush().map_err(|err| err.to_string())?;
         let mut answer = String::new();
         io::stdin()
@@ -100,8 +125,52 @@ fn kill_command(args: &[String]) -> Result<(), String> {
     }
 
     terminate_process_by_pid(pid)?;
-    println!("已结束 PID {pid}。");
+    match target {
+        KillTarget::Pid(pid) => println!("已结束 PID {pid}。"),
+        KillTarget::Port { port, pid } => println!("已结束占用端口 {port} 的 PID {pid}。"),
+    }
     Ok(())
+}
+
+enum KillTarget {
+    Pid(u32),
+    Port { port: u16, pid: u32 },
+}
+
+impl KillTarget {
+    fn pid(&self) -> u32 {
+        match self {
+            Self::Pid(pid) | Self::Port { pid, .. } => *pid,
+        }
+    }
+
+    fn confirmation_prompt(&self) -> String {
+        match self {
+            Self::Pid(pid) => format!("确认结束 PID {pid} 对应的进程？"),
+            Self::Port { port, pid } => format!("确认结束占用端口 {port} 的 PID {pid} 对应进程？"),
+        }
+    }
+}
+
+fn resolve_single_pid_for_port(port: u16, entries: &[PortEntry]) -> Result<u32, String> {
+    let mut pids = entries.iter().map(|entry| entry.pid).collect::<Vec<_>>();
+    pids.sort_unstable();
+    pids.dedup();
+
+    match pids.as_slice() {
+        [] => Err(format!("未找到占用本地端口 {port} 的进程。")),
+        [pid] => Ok(*pid),
+        _ => {
+            let pids = pids
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            Err(format!(
+                "本地端口 {port} 对应多个 PID：{pids}。请改用 kill --pid <pid>。"
+            ))
+        }
+    }
 }
 
 fn parse_filter_args(args: &[String]) -> Result<(PortFilter, bool), String> {
@@ -216,11 +285,54 @@ fn print_help() {
 用法：
   portKill-cli list [--json] [--protocol tcp|udp|all] [--state LISTENING] [--query text] [--listeners-only]
   portKill-cli find --port <port> [--json]
-  portKill-cli kill --pid <pid> [--yes]
+  portKill-cli kill (--pid <pid> | --port <port>) [--yes]
 
 说明：
   list 默认列出 TCP/UDP 端口。
   find 按本地端口查找。
   kill 结束的是进程，不是端口；未带 --yes 时需要输入 yes 确认。"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(port: u16, pid: u32) -> PortEntry {
+        PortEntry {
+            protocol: "TCP".to_string(),
+            local_addr: "127.0.0.1".to_string(),
+            local_port: port,
+            remote_addr: "-".to_string(),
+            remote_port: 0,
+            state: "LISTENING".to_string(),
+            pid,
+            process: "test.exe".to_string(),
+            path: String::new(),
+            user: String::new(),
+            command: String::new(),
+            process_type: String::new(),
+            can_terminate: true,
+            deny_reason: String::new(),
+        }
+    }
+
+    #[test]
+    fn resolves_single_pid_for_port() {
+        let entries = vec![entry(3000, 42), entry(3000, 42)];
+        assert_eq!(resolve_single_pid_for_port(3000, &entries), Ok(42));
+    }
+
+    #[test]
+    fn rejects_missing_port_owner() {
+        let err = resolve_single_pid_for_port(3000, &[]).unwrap_err();
+        assert!(err.contains("未找到"));
+    }
+
+    #[test]
+    fn rejects_multiple_pids_for_port() {
+        let entries = vec![entry(3000, 42), entry(3000, 43)];
+        let err = resolve_single_pid_for_port(3000, &entries).unwrap_err();
+        assert!(err.contains("多个 PID"));
+    }
 }

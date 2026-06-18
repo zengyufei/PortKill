@@ -93,12 +93,14 @@ dist\portKill-windows-x64-portable.zip
 
 ```powershell
 .\portKill-cli.exe kill --pid 12345
+.\portKill-cli.exe kill --port 3000
 ```
 
 不带 `--yes` 时，CLI 会要求输入 `yes` 二次确认。跳过确认：
 
 ```powershell
 .\portKill-cli.exe kill --pid 12345 --yes
+.\portKill-cli.exe kill --port 3000 --yes
 ```
 
 ## 开发

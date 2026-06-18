@@ -59,7 +59,7 @@ Files:
 CLI:
   portKill-cli list [--json] [--protocol tcp|udp|all] [--state LISTENING] [--query text] [--listeners-only]
   portKill-cli find --port <port> [--json]
-  portKill-cli kill --pid <pid> [--yes]
+  portKill-cli kill (--pid <pid> | --port <port>) [--yes]
 
 Safety:
 - This tool does not run in the background.

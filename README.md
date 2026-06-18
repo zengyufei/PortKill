@@ -93,12 +93,14 @@ End a process:
 
 ```powershell
 .\portKill-cli.exe kill --pid 12345
+.\portKill-cli.exe kill --port 3000
 ```
 
 Without `--yes`, the CLI asks for confirmation. To skip the prompt:
 
 ```powershell
 .\portKill-cli.exe kill --pid 12345 --yes
+.\portKill-cli.exe kill --port 3000 --yes
 ```
 
 ## Development
